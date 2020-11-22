@@ -1,0 +1,217 @@
+// This file defines the hierarchical protocol object storage (Hiprost) service.
+syntax = "proto3";
+
+package com.github.thecount.hiprost;
+
+option go_package = "github.com/TheCount/hiprost";
+
+// Hiprost defines the hierarchical protocol object storage RPCs.
+service Hiprost {
+  // PutObject creates or overwrites an object.
+  rpc PutObject(PutObjectRequest) returns (PutObjectResponse);
+
+  // GetObject retrieves an object.
+  rpc GetObject(GetObjectRequest) returns (GetObjectResponse);
+
+  // DeleteObject deletes an object.
+  rpc DeleteObject(DeleteObjectRequest) returns (DeleteObjectResponse);
+
+  // ListObjects lists all objects within a hierarchy.
+  rpc ListObjects(ListObjectsRequest) returns (ListObjectsResponse);
+
+  // WatchObjects watches objects for updates.
+  rpc WatchObjects(WatchObjectsRequest) returns (stream WatchObjectsResponse);
+}
+
+// PutObjectRequest is the PutObject RPC request message.
+message PutObjectRequest {
+  // address is the address of the object to be updated or created. Required.
+  Address address = 1;
+
+  // object is the object to update or create at address. Required.
+  // For updates, if object does not have type information, the same type as
+  // the existing object will be assumed.
+  Object object = 2;
+
+  // no_create forbids creation of new objects, only updates are allowed.
+  bool no_create = 3;
+
+  // old_object controls whether an existing object will be updated. If present,
+  // the object at address must match old_object. If old_object does not have
+  // type information, it will be assumed that the types match. If there is no
+  // object at address, it will be created regardless of the contents of
+  // old_object, unless no_create is also set.
+  Object old_object = 4;
+}
+
+// PutObjectResponse is the PutObject RPC response message.
+message PutObjectResponse {
+  // error describes the error which occurred during the PutObject RPC.
+  // Present if and only if an error occurred.
+  Error error = 1;
+
+  // created indicates whether the object was created (as opposed to updated).
+  bool created = 2;
+}
+
+// GetObjectRequest is the GetObject RPC request message.
+message GetObjectRequest {
+  // address is the address of the requested object. Required.
+  Address address = 1;
+
+  // missing_ok indicates that the RPC should not fail if there is no object
+  // at the specified address. If set, GetObjectResponse will simply be empty
+  // if the object is missing and the call was otherwise successful.
+  bool missing_ok = 2;
+}
+
+// GetObjectResponse is the GetObject RPC response message.
+message GetObjectResponse {
+  // error describes the error which occurred during the GetObject RPC.
+  // Present if and only if an error occurred.
+  Error error = 1;
+
+  // object is the requested object. May be omitted if an error occurred.
+  Object object = 2;
+}
+
+// DeleteObjectRequest is the DeleteObject RPC request message.
+message DeleteObjectRequest {
+  // address is the address of the object to be deleted. Required.
+  // If no object exists at the specified address, no operation is performed
+  // unless fail_if_missing is true, in which case an error will be raised.
+  Address address = 1;
+
+  // fail_if_missing indicates the attempt to delete a missing object should
+  // be treated as an error.
+  bool fail_if_missing = 2;
+
+  // old_object controls whether an existing object will be deleted. If present,
+  // the object at address must match old_object. If old_object does not have
+  // type information, it will be assumed that the types match. If there is no
+  // object at address, no error will be raised regardless of the contents of
+  // old_object, unless fail_if_missing is also set.
+  Object old_object = 3;
+}
+
+// DeleteObjectResponse is the DeleteObject RPC response message.
+message DeleteObjectResponse {
+  // error describes the error which occurred during the DeleteObject RPC.
+  // Present if and only if an error occurred.
+  Error error = 1;
+
+  // missing indicates the object was missing and thus no actual deletion
+  // occurred.
+  bool missing = 2;
+}
+
+// ListObjectsRequest is the ListObjects RPC request message.
+message ListObjectsRequest {
+  // hierarchy is the hierarchy for which objects should be listed. Required.
+  // This requests to list all objects for which the components of hierarchy
+  // is an initial segment of their address.
+  Address hierarchy = 1;
+}
+
+// ListObjectsResponse is the ListObjects RPC response message.
+message ListObjectsResponse {
+  // error describes the error which occurred during the ListObjects RPC.
+  // Present if and only if an error occurred.
+  Error error = 1;
+
+  // addresses is the list of addresses of all objects within the requested
+  // hierarchy. May be empty.
+  repeated Address addresses = 2;
+}
+
+// WatchObjectsRequest is the WatchObjects RPC request message.
+message WatchObjectsRequest {
+  // hierarchies is the list of hierarchies to watch. Required. Must be
+  // prefix-free (in particular, no duplicates).
+  repeated Address hierarchies = 1;
+
+  // interrogate specifies that the initial object values should be sent.
+  // The default is send only on update.
+  bool interrogate = 2;
+
+  // changed_only specifies that only object changes should be watched. Updates
+  // which do not change the object are ignored. interrogate is not affected by
+  // changed_only. Object creation and deletion of an existing object count as
+  // a change.
+  bool changed_only = 3;
+}
+
+// WatchObjectsResponse describes a WatchObjects RPC response message.
+message WatchObjectsResponse {
+  // error describes the error which occurred during the WatchObjects RPC.
+  // Present if and only if an error occurred. If present, this will be the last
+  // response message. The server will close the stream afterwards.
+  Error error = 1;
+
+  // address is the address of an updated object. Required unless an error
+  // occurred or the previous response used the same address.
+  Address address = 2;
+
+  // object is the updated object. Required unless an error occurred or the
+  // object at address has just been deleted. The type field of object will be
+  // empty if the immediately preceding WatchObjectsResponse with the same
+  // address had the same type. If this is the case, the data field will
+  // likewise be omitted if the immediately preceding WatchObjectsResponse with
+  // the same address had the exact same data.
+  Object object = 3;
+
+  // created indicates the object at address has just been created.
+  bool created = 4;
+}
+
+// Address describes an object address.
+// Addresses also define hierarchies.
+message Address {
+  // components are the address components.
+  // If components is omitted, the Address corresponds to the root of the
+  // hierarchy.
+  repeated string components = 1;
+}
+
+// Object describes an object.
+message Object {
+  // type is the object type.
+  // The object type is determined by the application and can be any non-empty
+  // string. The Hiprost service will not attempt to interpret the object type.
+  // Often, the type can be inferred from the context, in which case it can be
+  // omitted.
+  string type = 1;
+
+  // data is the object data. Two objects are considered equal if both their
+  // types and data are equal.
+  bytes data = 2;
+}
+
+// Error describes an error.
+message Error {
+  // Type describes the type of error.
+  enum Type {
+    // NONE means no error.
+    NONE = 0;
+
+    // BACKEND means the storage backend reported an error.
+    BACKEND = 1;
+
+    // NOT_EQUAL means that the equality check in PutObject or DeleteObject
+    // failed.
+    NOT_EQUAL = 2;
+
+    // NOT_FOUND means that an object could not be found at the specified
+    // address.
+    NOT_FOUND = 3;
+
+    // TYPE_MISSING means that an object type could not be inferred.
+    TYPE_MISSING = 4;
+  }
+
+  // Type is the type of this error.
+  Type type = 1;
+
+  // msg is an optional error message.
+  string msg = 2;
+}
