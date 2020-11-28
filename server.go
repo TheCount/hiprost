@@ -2,6 +2,7 @@ package hiprost
 
 import (
 	"context"
+	"errors"
 	"sort"
 
 	"github.com/TheCount/hiprost/backend/common"
@@ -270,4 +271,29 @@ func (s *server) WatchObjects(
 			return ctx.Err()
 		}
 	}
+}
+
+// NewHiprostServer creates a new GRPC Hiprost server with the specified
+// storage backend.
+func NewHiprostServer(backend common.Interface) (HiprostServer, error) {
+	if backend == nil {
+		return nil, errors.New("backend is nil")
+	}
+	return &server{
+		backend: backend,
+	}, nil
+}
+
+// RegisterNewHiprostServer creates a new GRPC Hiprost server with the specified
+// backend and registers it with the specified registrar (typically an instance
+// of *grpc.Server).
+func RegisterNewHiprostServer(
+	s grpc.ServiceRegistrar, backend common.Interface,
+) error {
+	server, err := NewHiprostServer(backend)
+	if err != nil {
+		return err
+	}
+	RegisterHiprostServer(s, server)
+	return nil
 }
