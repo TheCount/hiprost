@@ -605,7 +605,8 @@ type WatchObjectsRequest struct {
 	// changed_only specifies that only object changes should be watched. Updates
 	// which do not change the object are ignored. interrogate is not affected by
 	// changed_only. Object creation and deletion of an existing object count as
-	// a change.
+	// a change. The server may send unchanged objects anyway if its storage
+	// backend is unable to distinguish changing from non-changing updates.
 	ChangedOnly bool `protobuf:"varint,3,opt,name=changed_only,json=changedOnly,proto3" json:"changed_only,omitempty"`
 }
 
