@@ -49,14 +49,10 @@ func (a Address) Equal(other Address) bool {
 	return true
 }
 
-// String renders this address as an URL string.
+// String renders this address as a string.
+// The string can be used as the path component in an URL.
 func (a Address) String() string {
 	var result strings.Builder
-	result.WriteString("hiprost:")
-	if len(a) == 0 {
-		result.WriteByte('/')
-		return result.String()
-	}
 	for _, comp := range a {
 		result.WriteByte('/')
 		result.WriteString(url.PathEscape(comp))
