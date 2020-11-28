@@ -11,7 +11,7 @@ type Interface interface {
 	// equal, the old object is replaced with new and swapped == true is returned.
 	// If the data field of new is nil, the object is deleted instead.
 	// If they are not equal, no operation is performed and swapped == false is
-	// returned.
+	// returned. A nonexistent object is considered to be not equal.
 	CompareAndSwapObject(ctx context.Context, addr Address,
 		old, new Object) (swapped bool, err error)
 
@@ -33,7 +33,7 @@ type Interface interface {
 	ListObjects(ctx context.Context, baseAddr Address) ([]Address, error)
 
 	// LoadObject returns the specified object at address. If no object exists at
-	// address, the returned object will have its Data field set to nil.
+	// address, the returned object will be the zero value.
 	LoadObject(ctx context.Context, addr Address) (Object, error)
 
 	// StoreObject behaves like CreateObject if no object exists at the specified
@@ -55,6 +55,8 @@ type Interface interface {
 	// first update. Implementors must be prepared for the case that updateCh is
 	// closed by another goroutine, for example if the same channel is passed to
 	// multiple calls to WatchObjects.
+	//
+	// WatchObjects returns immediately, updates are served from a new goroutine.
 	WatchObjects(ctx context.Context, baseAddr Address, sendInitial bool,
 		updateCh chan<- Update) error
 }
