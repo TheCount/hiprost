@@ -1,6 +1,11 @@
 package common
 
-import "bytes"
+import (
+	"bytes"
+	"fmt"
+
+	"google.golang.org/protobuf/encoding/protowire"
+)
 
 // Object describes an object.
 type Object struct {
@@ -22,4 +27,31 @@ func (o Object) Equal(other Object) bool {
 		}
 	}
 	return bytes.Equal(o.Data, other.Data)
+}
+
+// Encode serialises this object, appending the serialised data to dst and
+// returning it.
+func (o Object) Encode(dst []byte) []byte {
+	dst = protowire.AppendString(dst, o.Type)
+	dst = protowire.AppendBytes(dst, o.Data)
+	return dst
+}
+
+// Decode decodes the serialised input into this object.
+func (o *Object) Decode(in []byte) error {
+	t, tlen := protowire.ConsumeString(in)
+	if tlen < 0 {
+		return fmt.Errorf("parse type: %w", protowire.ParseError(tlen))
+	}
+	d, dlen := protowire.ConsumeBytes(in[tlen:])
+	if dlen < 0 {
+		return fmt.Errorf("parse data: %w", protowire.ParseError(dlen))
+	}
+	if len(in) != tlen+dlen {
+		return fmt.Errorf("unused extra bytes (want: %d, have: %d)",
+			tlen+dlen, len(in))
+	}
+	o.Type = t
+	o.Data = d
+	return nil
 }

@@ -1,6 +1,9 @@
 package common
 
 import (
+	"bytes"
+	"errors"
+	"fmt"
 	"net/url"
 	"strings"
 )
@@ -58,4 +61,26 @@ func (a Address) String() string {
 		result.WriteString(url.PathEscape(comp))
 	}
 	return result.String()
+}
+
+// NewAddressFromBytes creates a new address from the specified raw bytes.
+// Invariant: addr.Equal(NewAddressFromBytes([]byte(addr.String()))).
+func NewAddressFromBytes(raw []byte) (Address, error) {
+	if len(raw) == 0 {
+		return []string{}, nil
+	}
+	if raw[0] != '/' {
+		return nil, errors.New("encoded non-empty address must start with '/'")
+	}
+	raw = raw[1:]
+	parts := bytes.Split(raw, []byte{'/'})
+	result := make([]string, len(parts))
+	for i := range result {
+		component, err := url.PathUnescape(string(parts[i]))
+		if err != nil {
+			return nil, fmt.Errorf("unescape component %d: %w", i+1, err)
+		}
+		result[i] = component
+	}
+	return result, nil
 }
