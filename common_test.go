@@ -12,6 +12,11 @@ var (
 		Components: []string{"test", "123"},
 	}
 
+	// missingAddress is an address for which there is no object.
+	missingAddress = &Address{
+		Components: []string{"does", "not", "exist"},
+	}
+
 	// testObject is a generic test object.
 	testObject = &Object{
 		Type: "testType",

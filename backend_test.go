@@ -23,6 +23,8 @@ type backendTest struct {
 
 // backendTests is the list of backend tests to perform for each backend.
 var backendTests = [...]backendTest{
+	backendTest{"GetMissingObject", testGetMissingObject},
+	backendTest{"GetNilAddress", testGetNilAddress},
 	backendTest{"PutNilAddress", testPutNilAddress},
 	backendTest{"PutNilObject", testPutNilObject},
 	backendTest{"PutGetObject", testPutGetObject},
