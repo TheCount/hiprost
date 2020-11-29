@@ -1,6 +1,7 @@
 package hiprost
 
 import (
+	"bytes"
 	"context"
 	"testing"
 )
@@ -25,4 +26,9 @@ func getContext(t *testing.T) (context.Context, context.CancelFunc) {
 		return context.Background(), func() {}
 	}
 	return context.WithDeadline(context.Background(), deadline)
+}
+
+// objectEqual checks whether the two objects are equal.
+func objectEqual(o1, o2 *Object) bool {
+	return o1.Type == o2.Type && bytes.Equal(o1.Data, o2.Data)
 }

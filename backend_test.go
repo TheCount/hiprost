@@ -25,6 +25,7 @@ type backendTest struct {
 var backendTests = [...]backendTest{
 	backendTest{"PutNilAddress", testPutNilAddress},
 	backendTest{"PutNilObject", testPutNilObject},
+	backendTest{"PutGetObject", testPutGetObject},
 }
 
 // runBackendTestSuite runs generic tests with the specified backend.
