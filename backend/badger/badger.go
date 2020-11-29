@@ -5,17 +5,38 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"sync"
+	"time"
 
 	"github.com/TheCount/hiprost/backend/common"
 	badger "github.com/dgraph-io/badger/v2"
 )
+
+const (
+	// averageRunGC is the average duration between badger GC runs.
+	averageRunGC = 10 * time.Minute
+
+	// runGCFuzz is the maximum random deviation from the average GC run interval.
+	runGCFuzz = 5 * time.Minute
+)
+
+// getRandomDuration draws a random duration in the interval
+// averageRunGC ± runGCFuzz.
+func getRandomDuration() time.Duration {
+	limit := 2 * int64(runGCFuzz)
+	fuzz := time.Duration(rand.Int63n(limit)) - runGCFuzz
+	return averageRunGC + fuzz
+}
 
 // T implements the Hiprost common backend interface and the
 // io.Closer interface.
 type T struct {
 	// db is the badger database backing the storage.
 	db *badger.DB
+
+	// done is a channel which is closed when Close is called for the first time.
+	done chan struct{}
 }
 
 var (
@@ -31,16 +52,47 @@ func Open(dir string) (*T, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open badger database: %w", err)
 	}
-	return &T{db}, nil
+	result := &T{
+		db:   db,
+		done: make(chan struct{}),
+	}
+	go result.runGC()
+	return result, nil
 }
 
 // Close implements io.Closer.Close. Must be called when concluding the use
 // of this backend.
 func (t *T) Close() error {
+	if err := func() (err error) {
+		defer func() {
+			if r := recover(); r != nil {
+				err = errors.New("badger database already closed")
+			}
+		}()
+		close(t.done)
+		return
+	}(); err != nil {
+		return err
+	}
 	if err := t.db.Close(); err != nil {
 		return fmt.Errorf("close badger database: %w", err)
 	}
 	return nil
+}
+
+// runGC runs the badger GC at random intervals.
+func (t *T) runGC() {
+	timer := time.NewTimer(getRandomDuration())
+	defer timer.Stop()
+	for {
+		select {
+		case <-timer.C:
+			t.db.RunValueLogGC(0.5)
+			timer.Reset(getRandomDuration())
+		case <-t.done:
+			return
+		}
+	}
 }
 
 // CompareAndSwapObject implements common.Interface.CompareAndSwapObject.
