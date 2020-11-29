@@ -8,6 +8,7 @@ import (
 	"github.com/TheCount/hiprost/backend/common"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // server implements HiprostServer.
@@ -23,10 +24,10 @@ func (s *server) PutObject(ctx context.Context, req *PutObjectRequest) (
 	*PutObjectResponse, error,
 ) {
 	if req.Address == nil {
-		return nil, grpc.Errorf(codes.InvalidArgument, "address missing")
+		return nil, status.Errorf(codes.InvalidArgument, "address missing")
 	}
 	if req.Object == nil {
-		return nil, grpc.Errorf(codes.InvalidArgument, "object missing")
+		return nil, status.Errorf(codes.InvalidArgument, "object missing")
 	}
 	address := req.Address.AsCommon()
 	object := req.Object.AsCommon()
@@ -86,7 +87,7 @@ func (s *server) GetObject(ctx context.Context, req *GetObjectRequest) (
 	*GetObjectResponse, error,
 ) {
 	if req.Address == nil {
-		return nil, grpc.Errorf(codes.InvalidArgument, "address missing")
+		return nil, status.Errorf(codes.InvalidArgument, "address missing")
 	}
 	address := req.Address.AsCommon()
 	result := &GetObjectResponse{}
@@ -113,7 +114,7 @@ func (s *server) DeleteObject(ctx context.Context, req *DeleteObjectRequest) (
 	*DeleteObjectResponse, error,
 ) {
 	if req.Address == nil {
-		return nil, grpc.Errorf(codes.InvalidArgument, "address missing")
+		return nil, status.Errorf(codes.InvalidArgument, "address missing")
 	}
 	address := req.Address.AsCommon()
 	result := &DeleteObjectResponse{}
@@ -162,7 +163,7 @@ func (s *server) ListObjects(ctx context.Context, req *ListObjectsRequest) (
 	*ListObjectsResponse, error,
 ) {
 	if req.Hierarchy == nil {
-		return nil, grpc.Errorf(codes.InvalidArgument, "hierarchy missing")
+		return nil, status.Errorf(codes.InvalidArgument, "hierarchy missing")
 	}
 	baseAddr := req.Hierarchy.AsCommon()
 	result := &ListObjectsResponse{}
@@ -185,7 +186,7 @@ func (s *server) WatchObjects(
 	req *WatchObjectsRequest, stream Hiprost_WatchObjectsServer,
 ) error {
 	if len(req.Hierarchies) == 0 {
-		return grpc.Errorf(codes.InvalidArgument, "hierarchies missing")
+		return status.Errorf(codes.InvalidArgument, "hierarchies missing")
 	}
 	// Sort hierarchies lexicographically and check for duplicates.
 	hierarchies := make([]common.Address, len(req.Hierarchies))
@@ -197,7 +198,7 @@ func (s *server) WatchObjects(
 	})
 	for i := 0; i < len(hierarchies)-1; i++ {
 		if hierarchies[i].IsPrefixOf(hierarchies[i+1]) {
-			return grpc.Errorf(codes.InvalidArgument,
+			return status.Errorf(codes.InvalidArgument,
 				"hierarchy '%s' is a prefix of '%s'", hierarchies[i], hierarchies[i+1])
 		}
 	}
