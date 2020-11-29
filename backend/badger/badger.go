@@ -265,6 +265,9 @@ func (t *T) StoreObject(
 	if err = tx.Set(key, obj.Encode(nil)); err != nil {
 		return false, err
 	}
+	if err = tx.Commit(); err != nil {
+		return false, err
+	}
 	return
 }
 
@@ -281,6 +284,9 @@ func (t *T) UpdateObject(
 		return false, err
 	}
 	if err := tx.Set(key, obj.Encode(nil)); err != nil {
+		return false, err
+	}
+	if err := tx.Commit(); err != nil {
 		return false, err
 	}
 	return true, nil
