@@ -6,6 +6,7 @@ import (
 
 	"github.com/TheCount/hiprost/backend/common"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 )
 
 // testServerAddr is the address the test server is listening on.
@@ -52,6 +53,17 @@ func runBackendTestSuite(t *testing.T, backend common.Interface) {
 			t.Errorf("closing client connection: %s", err)
 		}
 	}()
+	ctx, cancel := getContext(t)
+	for {
+		connState := conn.GetState()
+		if connState == connectivity.Ready {
+			break
+		}
+		if !conn.WaitForStateChange(ctx, connState) {
+			t.Fatal("unable to connect to server")
+		}
+	}
+	cancel()
 	client := NewHiprostClient(conn)
 	// run tests
 	for _, test := range backendTests {
