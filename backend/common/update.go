@@ -10,20 +10,21 @@ type Update struct {
 	// Address is the address of the changed object.
 	Address Address
 
-	// Old and New represent the old and new state of the changed object.
-	// If the object was newly created, Old is the zero value. If the object
-	// was deleted, New is the zero value. If the update was sent not based on
-	// a change, New contains the current object state, and Old has only its
-	// Data field set.
-	Old, New Object
+	// Object is the updated object, with appropriate flags.
+	Object Object
 }
 
 // IsCreated reports whether this update describes an object creation.
 func (u Update) IsCreated() bool {
-	return u.Err == nil && u.Old.Type == "" && u.Old.Data == nil
+	return u.Err == nil && u.Object.Flags&FlagCreated != 0
 }
 
 // IsDeleted reports whether this update describes an object deletion.
 func (u Update) IsDeleted() bool {
-	return u.Err == nil && u.New.Type == "" && u.New.Data == nil
+	return u.Err == nil && u.Object.Flags&FlagDeleted != 0
+}
+
+// IsChanged reports whether this update describes an object change.
+func (u Update) IsChanged() bool {
+	return u.Err == nil && u.Object.Flags&FlagChanged != 0
 }

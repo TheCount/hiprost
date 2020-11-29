@@ -77,6 +77,9 @@ func (t *T) CompareAndSwapObject(
 		return true, nil
 	}
 	// Store new object
+	if !stored.Equal(new) {
+		new.Flags = common.FlagChanged
+	}
 	val := new.Encode(nil)
 	if err = tx.Set(key, val); err != nil {
 		return false, err
@@ -91,6 +94,7 @@ func (t *T) CompareAndSwapObject(
 func (t *T) CreateObject(
 	ctx context.Context, addr common.Address, obj common.Object,
 ) (bool, error) {
+	obj.Flags = common.FlagCreated | common.FlagChanged
 	key := []byte(addr.String())
 	tx := t.db.NewTransaction(true)
 	defer tx.Discard()
@@ -189,10 +193,22 @@ func (t *T) StoreObject(
 	key := []byte(addr.String())
 	tx := t.db.NewTransaction(true)
 	defer tx.Discard()
-	if _, err := tx.Get(key); err == badger.ErrKeyNotFound {
+	item, err := tx.Get(key)
+	if err == badger.ErrKeyNotFound {
 		created = true
+		obj.Flags = common.FlagCreated | common.FlagChanged
 	} else if err != nil {
 		return false, err
+	} else {
+		var stored common.Object
+		if err = item.Value(func(val []byte) error {
+			return stored.Decode(val)
+		}); err != nil {
+			return false, err
+		}
+		if !stored.Equal(obj) {
+			obj.Flags = common.FlagChanged
+		}
 	}
 	if err = tx.Set(key, obj.Encode(nil)); err != nil {
 		return false, err
@@ -267,9 +283,7 @@ func (t *T) sendUpdates(
 					return fmt.Errorf("decode object: %w", err)
 				}
 			}
-			if err = t.sendUpdate(updateCh, addr, common.Object{
-				Type: obj.Type,
-			}, obj); err != nil {
+			if err = t.sendUpdate(updateCh, addr, obj); err != nil {
 				return fmt.Errorf("send update: %w", err)
 			}
 		}
@@ -313,9 +327,7 @@ func (t *T) sendInitial(
 					seenMx.Lock()
 					defer seenMx.Unlock()
 					if _, ok := (*seen)[string(item.Key())]; !ok {
-						if err = t.sendUpdate(updateCh, addr, common.Object{
-							Type: obj.Type,
-						}, obj); err != nil {
+						if err = t.sendUpdate(updateCh, addr, obj); err != nil {
 							return fmt.Errorf("send object '%s': %w", item.Key(), err)
 						}
 					}
@@ -342,7 +354,7 @@ func (t *T) sendInitial(
 
 // sendUpdate sends an update to the specified update channel.
 func (t *T) sendUpdate(
-	updateCh chan<- common.Update, addr common.Address, old, new common.Object,
+	updateCh chan<- common.Update, addr common.Address, obj common.Object,
 ) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -351,8 +363,7 @@ func (t *T) sendUpdate(
 	}()
 	updateCh <- common.Update{
 		Address: addr,
-		Old:     old,
-		New:     new,
+		Object:  obj,
 	}
 	return nil
 }

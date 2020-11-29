@@ -7,6 +7,22 @@ import (
 	"google.golang.org/protobuf/encoding/protowire"
 )
 
+// ObjectFlags describe object flags.
+type ObjectFlags uint
+
+// Object flags
+const (
+	// FlagCreated means that this is the first object to be stored at the
+	// address, or that a previously deleted object has been restored.
+	FlagCreated ObjectFlags = 1 << iota
+
+	// FlagDeleted means that the object has been deleted.
+	FlagDeleted
+
+	// FlagChanged means that the object has changed.
+	FlagChanged
+)
+
 // Object describes an object.
 type Object struct {
 	// Type is the object type. Can be omitted if it can be inferred.
@@ -14,6 +30,10 @@ type Object struct {
 
 	// Data is the object data.
 	Data []byte
+
+	// Flags are object flags.
+	// They are ignored for objects handed from the server frontend to a backend.
+	Flags ObjectFlags
 }
 
 // Equal reports whether this object is equal to other.
@@ -34,6 +54,7 @@ func (o Object) Equal(other Object) bool {
 func (o Object) Encode(dst []byte) []byte {
 	dst = protowire.AppendString(dst, o.Type)
 	dst = protowire.AppendBytes(dst, o.Data)
+	dst = protowire.AppendVarint(dst, uint64(o.Flags))
 	return dst
 }
 
@@ -47,11 +68,16 @@ func (o *Object) Decode(in []byte) error {
 	if dlen < 0 {
 		return fmt.Errorf("parse data: %w", protowire.ParseError(dlen))
 	}
-	if len(in) != tlen+dlen {
+	f, flen := protowire.ConsumeVarint(in[tlen+dlen:])
+	if flen < 0 {
+		return fmt.Errorf("parse flags: %w", protowire.ParseError(flen))
+	}
+	if len(in) != tlen+dlen+flen {
 		return fmt.Errorf("unused extra bytes (want: %d, have: %d)",
-			tlen+dlen, len(in))
+			tlen+dlen+flen, len(in))
 	}
 	o.Type = t
 	o.Data = d
+	o.Flags = ObjectFlags(f)
 	return nil
 }

@@ -241,7 +241,7 @@ func (s *server) WatchObjects(
 				result.Created = false
 				return stream.Send(result)
 			}
-			if req.ChangedOnly && update.Old.Equal(update.New) {
+			if req.ChangedOnly && !update.IsChanged() {
 				continue
 			}
 			if previousAddress.Equal(update.Address) {
@@ -257,11 +257,11 @@ func (s *server) WatchObjects(
 				result.Object = nil
 			} else {
 				result.Object = &Object{
-					Data: update.New.Data,
+					Data: update.Object.Data,
 				}
-				if update.New.Type != seenTypes[update.Address.String()] {
-					result.Object.Type = update.New.Type
-					seenTypes[update.Address.String()] = update.New.Type
+				if update.Object.Type != seenTypes[update.Address.String()] {
+					result.Object.Type = update.Object.Type
+					seenTypes[update.Address.String()] = update.Object.Type
 				}
 			}
 			if err := stream.Send(result); err != nil {

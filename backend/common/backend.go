@@ -50,9 +50,10 @@ type Interface interface {
 		addr Address, obj Object) (updated bool, err error)
 
 	// WatchObjects sends updates for the objects for whose addresses baseAddr is
-	// a prefix. The updates are sent to the specified update channel.
-	// If sendInitial is true, the inital values of objects will be sent in the
-	// first update. Implementors must be prepared for the case that updateCh is
+	// a prefix. The updates are sent to the specified update channel until the
+	// specified context is done.
+	// If sendInitial is true, the inital values of objects will be sent as well.
+	// Implementors must be prepared for the case that updateCh is
 	// closed by another goroutine, for example if the same channel is passed to
 	// multiple calls to WatchObjects.
 	//
