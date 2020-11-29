@@ -24,7 +24,7 @@ func testPutNilObject(t *testing.T, client HiprostClient) {
 	ctx, cancel := getContext(t)
 	defer cancel()
 	if _, err := client.PutObject(ctx, &PutObjectRequest{
-		Address: testAddr,
+		Address: testAddress,
 	}); status.Code(err) != codes.InvalidArgument {
 		t.Fatal(
 			"expected invalid argument error when calling PutObject with nil object")

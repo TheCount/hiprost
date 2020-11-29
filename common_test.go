@@ -6,8 +6,8 @@ import (
 )
 
 var (
-	// testAddr is a generic test address.
-	testAddr = &Address{
+	// testAddress is a generic test address.
+	testAddress = &Address{
 		Components: []string{"test", "123"},
 	}
 
