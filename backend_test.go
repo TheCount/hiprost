@@ -24,6 +24,7 @@ type backendTest struct {
 // backendTests is the list of backend tests to perform for each backend.
 var backendTests = [...]backendTest{
 	backendTest{"PutNilAddress", testPutNilAddress},
+	backendTest{"PutNilObject", testPutNilObject},
 }
 
 // runBackendTestSuite runs generic tests with the specified backend.
