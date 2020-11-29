@@ -5,6 +5,12 @@ import (
 	"testing"
 )
 
+// testObject is a generic test object.
+var testObject = &Object{
+	Type: "testType",
+	Data: []byte("testData"),
+}
+
 // getContext obtains a context for the specified test.
 func getContext(t *testing.T) (context.Context, context.CancelFunc) {
 	deadline, ok := t.Deadline()
