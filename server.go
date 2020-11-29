@@ -290,6 +290,9 @@ func NewHiprostServer(backend common.Interface) (HiprostServer, error) {
 func RegisterNewHiprostServer(
 	s grpc.ServiceRegistrar, backend common.Interface,
 ) error {
+	if s == nil {
+		return errors.New("service registrar is nil")
+	}
 	server, err := NewHiprostServer(backend)
 	if err != nil {
 		return err
