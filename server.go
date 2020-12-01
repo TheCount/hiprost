@@ -25,10 +25,10 @@ func (s *server) PutObject(ctx context.Context, req *PutObjectRequest) (
 	*PutObjectResponse, error,
 ) {
 	if req.Address == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "address missing")
+		return nil, status.Error(codes.InvalidArgument, "address missing")
 	}
 	if req.Object == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "object missing")
+		return nil, status.Error(codes.InvalidArgument, "object missing")
 	}
 	address := req.Address.AsCommon()
 	object := req.Object.AsCommon()
@@ -109,7 +109,7 @@ func (s *server) GetObject(ctx context.Context, req *GetObjectRequest) (
 	*GetObjectResponse, error,
 ) {
 	if req.Address == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "address missing")
+		return nil, status.Error(codes.InvalidArgument, "address missing")
 	}
 	address := req.Address.AsCommon()
 	result := &GetObjectResponse{}
@@ -136,7 +136,7 @@ func (s *server) DeleteObject(ctx context.Context, req *DeleteObjectRequest) (
 	*DeleteObjectResponse, error,
 ) {
 	if req.Address == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "address missing")
+		return nil, status.Error(codes.InvalidArgument, "address missing")
 	}
 	address := req.Address.AsCommon()
 	result := &DeleteObjectResponse{}
@@ -185,7 +185,7 @@ func (s *server) ListObjects(ctx context.Context, req *ListObjectsRequest) (
 	*ListObjectsResponse, error,
 ) {
 	if req.Hierarchy == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "hierarchy missing")
+		return nil, status.Error(codes.InvalidArgument, "hierarchy missing")
 	}
 	baseAddr := req.Hierarchy.AsCommon()
 	result := &ListObjectsResponse{}
@@ -208,7 +208,7 @@ func (s *server) WatchObjects(
 	req *WatchObjectsRequest, stream Hiprost_WatchObjectsServer,
 ) error {
 	if len(req.Hierarchies) == 0 {
-		return status.Errorf(codes.InvalidArgument, "hierarchies missing")
+		return status.Error(codes.InvalidArgument, "hierarchies missing")
 	}
 	// Sort hierarchies lexicographically and check for duplicates.
 	hierarchies := make([]common.Address, len(req.Hierarchies))
