@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sort"
+	"time"
 
 	"github.com/TheCount/hiprost/backend/common"
 	"google.golang.org/grpc"
@@ -32,10 +33,31 @@ func (s *server) PutObject(ctx context.Context, req *PutObjectRequest) (
 	address := req.Address.AsCommon()
 	object := req.Object.AsCommon()
 	result := &PutObjectResponse{}
+	// Calculate TTL
+	var ttl time.Duration
+	exp := req.Expiration
+	if exp != nil {
+		switch x := exp.Type.(type) {
+		case nil:
+			return nil, status.Error(codes.InvalidArgument, "ttl type missing")
+		case *Expiration_Ttl:
+			ttl = x.Ttl.AsDuration()
+		case *Expiration_ExpiresAt:
+			ttl = x.ExpiresAt.AsTime().Sub(time.Now())
+		default:
+			return nil, status.Error(codes.Unimplemented, "unknown expiry type")
+		}
+		if ttl < 0 {
+			result.Error = &Error{
+				Type: Error_ALREADY_EXPIRED,
+				Msg:  "object has already expired",
+			}
+		}
+	}
 	// Handle CAS case
 	if req.OldObject != nil {
 		ok, err := s.backend.CompareAndSwapObject(ctx, address,
-			req.OldObject.AsCommon(), object)
+			req.OldObject.AsCommon(), object, ttl)
 		if err != nil {
 			result.Error = backendError(err)
 			return result, nil
@@ -44,7 +66,7 @@ func (s *server) PutObject(ctx context.Context, req *PutObjectRequest) (
 			return result, nil
 		}
 		if !req.NoCreate {
-			ok, err = s.backend.CreateObject(ctx, address, object)
+			ok, err = s.backend.CreateObject(ctx, address, object, ttl)
 			if err != nil {
 				result.Error = backendError(err)
 				return result, nil
@@ -59,7 +81,7 @@ func (s *server) PutObject(ctx context.Context, req *PutObjectRequest) (
 	}
 	// Handle standard case
 	if req.NoCreate || object.Type == "" {
-		ok, err := s.backend.UpdateObject(ctx, address, object)
+		ok, err := s.backend.UpdateObject(ctx, address, object, ttl)
 		if err != nil {
 			result.Error = backendError(err)
 			return result, nil
@@ -73,7 +95,7 @@ func (s *server) PutObject(ctx context.Context, req *PutObjectRequest) (
 		}
 		return result, nil
 	}
-	created, err := s.backend.StoreObject(ctx, address, object)
+	created, err := s.backend.StoreObject(ctx, address, object, ttl)
 	if err != nil {
 		result.Error = backendError(err)
 		return result, nil
@@ -121,7 +143,7 @@ func (s *server) DeleteObject(ctx context.Context, req *DeleteObjectRequest) (
 	// Handle CAS case
 	if req.OldObject != nil {
 		ok, err := s.backend.CompareAndSwapObject(ctx, address,
-			req.OldObject.AsCommon(), common.Object{})
+			req.OldObject.AsCommon(), common.Object{}, 0)
 		if err != nil {
 			result.Error = backendError(err)
 			return result, nil

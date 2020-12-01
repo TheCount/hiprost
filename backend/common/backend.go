@@ -3,6 +3,7 @@ package common
 
 import (
 	"context"
+	"time"
 )
 
 // Interface is the common backend interface.
@@ -12,15 +13,21 @@ type Interface interface {
 	// If the data field of new is nil, the object is deleted instead.
 	// If they are not equal, no operation is performed and swapped == false is
 	// returned. A nonexistent object is considered to be not equal.
+	// The ttl controls after which time the backend may forget (delete) the
+	// object. A value of zero means that the object should not be
+	// automatically deleted.
 	CompareAndSwapObject(ctx context.Context, addr Address,
-		old, new Object) (swapped bool, err error)
+		old, new Object, ttl time.Duration) (swapped bool, err error)
 
 	// CreateObject creates the specified object at address if it does not already
 	// exist. If the object is created, created == true is returned. If an object
 	// already exists at address, no operation is performed and created == false
 	// is returned.
+	// The ttl controls after which time the backend may forget (delete) the
+	// object. A value of zero means that the object should not be
+	// automatically deleted.
 	CreateObject(ctx context.Context,
-		addr Address, obj Object) (created bool, err error)
+		addr Address, obj Object, ttl time.Duration) (created bool, err error)
 
 	// DeleteObject deletes the object at the specified address. If the object
 	// exists, deleted == true is returned. If no object exists at address,
@@ -39,15 +46,21 @@ type Interface interface {
 	// StoreObject behaves like CreateObject if no object exists at the specified
 	// address. Otherwise, StoreObject behaves like UpdateObject. StoreObject
 	// returns whether the store resulted in the creation of a new object.
+	// The ttl controls after which time the backend may forget (delete) the
+	// object. A value of zero means that the object should not be
+	// automatically deleted.
 	StoreObject(ctx context.Context,
-		addr Address, obj Object) (created bool, err error)
+		addr Address, obj Object, ttl time.Duration) (created bool, err error)
 
 	// UpdateObject updates the object at address, but only if it already exists.
 	// If the object is updated, updated == true is returned. If no object exists
 	// at the specified address, no operation is performed and updated == false
 	// is returned.
+	// The ttl controls after which time the backend may forget (delete) the
+	// object. A value of zero means that the object should not be
+	// automatically deleted.
 	UpdateObject(ctx context.Context,
-		addr Address, obj Object) (updated bool, err error)
+		addr Address, obj Object, ttl time.Duration) (updated bool, err error)
 
 	// WatchObjects sends updates for the objects for whose addresses baseAddr is
 	// a prefix. The updates are sent to the specified update channel until the

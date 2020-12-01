@@ -95,10 +95,23 @@ func (t *T) runGC() {
 	}
 }
 
+// makeEntry creates a badger database entry.
+func makeEntry(key, val []byte, ttl time.Duration) *badger.Entry {
+	result := badger.NewEntry(key, val)
+	if ttl > 0 {
+		result = result.WithTTL(ttl)
+	}
+	return result
+}
+
 // CompareAndSwapObject implements common.Interface.CompareAndSwapObject.
 func (t *T) CompareAndSwapObject(
 	ctx context.Context, addr common.Address, old, new common.Object,
+	ttl time.Duration,
 ) (bool, error) {
+	if ttl < 0 {
+		return false, errors.New("negative ttl")
+	}
 	key := []byte(addr.String())
 	tx := t.db.NewTransaction(true)
 	defer tx.Discard()
@@ -133,7 +146,8 @@ func (t *T) CompareAndSwapObject(
 		new.Flags = common.FlagChanged
 	}
 	val := new.Encode(nil)
-	if err = tx.Set(key, val); err != nil {
+	entry := makeEntry(key, val, ttl)
+	if err = tx.SetEntry(entry); err != nil {
 		return false, err
 	}
 	if err = tx.Commit(); err != nil {
@@ -145,7 +159,11 @@ func (t *T) CompareAndSwapObject(
 // CreateObject implements common.Interface.CreateObject.
 func (t *T) CreateObject(
 	ctx context.Context, addr common.Address, obj common.Object,
+	ttl time.Duration,
 ) (bool, error) {
+	if ttl < 0 {
+		return false, errors.New("negative ttl")
+	}
 	obj.Flags = common.FlagCreated | common.FlagChanged
 	key := []byte(addr.String())
 	tx := t.db.NewTransaction(true)
@@ -154,7 +172,8 @@ func (t *T) CreateObject(
 		return false, err
 	}
 	val := obj.Encode(nil)
-	if err := tx.Set(key, val); err != nil {
+	entry := makeEntry(key, val, ttl)
+	if err := tx.SetEntry(entry); err != nil {
 		return false, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -241,7 +260,11 @@ func (t *T) LoadObject(
 // StoreObject implements common.Interface.StoreObject.
 func (t *T) StoreObject(
 	ctx context.Context, addr common.Address, obj common.Object,
+	ttl time.Duration,
 ) (created bool, err error) {
+	if ttl < 0 {
+		return false, errors.New("negative ttl")
+	}
 	key := []byte(addr.String())
 	tx := t.db.NewTransaction(true)
 	defer tx.Discard()
@@ -262,7 +285,8 @@ func (t *T) StoreObject(
 			obj.Flags = common.FlagChanged
 		}
 	}
-	if err = tx.Set(key, obj.Encode(nil)); err != nil {
+	entry := makeEntry(key, obj.Encode(nil), ttl)
+	if err = tx.SetEntry(entry); err != nil {
 		return false, err
 	}
 	if err = tx.Commit(); err != nil {
@@ -274,7 +298,11 @@ func (t *T) StoreObject(
 // UpdateObject implements common.Interface.UpdateObject.
 func (t *T) UpdateObject(
 	ctx context.Context, addr common.Address, obj common.Object,
+	ttl time.Duration,
 ) (bool, error) {
+	if ttl < 0 {
+		return false, errors.New("negative ttl")
+	}
 	key := []byte(addr.String())
 	tx := t.db.NewTransaction(true)
 	defer tx.Discard()
@@ -283,7 +311,8 @@ func (t *T) UpdateObject(
 	} else if err != nil {
 		return false, err
 	}
-	if err := tx.Set(key, obj.Encode(nil)); err != nil {
+	entry := makeEntry(key, obj.Encode(nil), ttl)
+	if err := tx.SetEntry(entry); err != nil {
 		return false, err
 	}
 	if err := tx.Commit(); err != nil {

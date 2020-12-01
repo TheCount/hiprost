@@ -5,6 +5,9 @@ package com.github.thecount.hiprost;
 
 option go_package = "github.com/TheCount/hiprost";
 
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
 // Hiprost defines the hierarchical protocol object storage RPCs.
 service Hiprost {
   // PutObject creates or overwrites an object.
@@ -42,6 +45,10 @@ message PutObjectRequest {
   // object at address, it will be created regardless of the contents of
   // old_object, unless no_create is also set.
   Object old_object = 4;
+
+  // expiration, if present, allows the server to forget the put object once
+  // it expires.
+  Expiration expiration = 5;
 }
 
 // PutObjectResponse is the PutObject RPC response message.
@@ -188,6 +195,20 @@ message Object {
   bytes data = 2;
 }
 
+// Expiration describes when an object expires. Once an object has expired,
+// the server may forget about it.
+message Expiration {
+  // type decides how the expiration is calculated. Required.
+  oneof type {
+    // ttl is the time-to-live measured from a point in time no earlier than
+    // the initial reception of the object.
+    google.protobuf.Duration ttl = 1;
+
+    // expires_at is the time at which the object expires.
+    google.protobuf.Timestamp expires_at = 2;
+  }
+}
+
 // Error describes an error.
 message Error {
   // Type describes the type of error.
@@ -208,6 +229,10 @@ message Error {
 
     // TYPE_MISSING means that an object type could not be inferred.
     TYPE_MISSING = 4;
+
+    // ALREADY_EXPIRED means that the object's expires_at setting was
+    // already in the past upon reception.
+    ALREADY_EXPIRED = 5;
   }
 
   // Type is the type of this error.
