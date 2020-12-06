@@ -468,3 +468,8 @@ func (t *T) sendError(updateCh chan<- common.Update, err error) (rerr error) {
 	}
 	return nil
 }
+
+// Sync implements common.Interface.Sync.
+func (t *T) Sync(ctx context.Context) error {
+	return t.db.Sync()
+}

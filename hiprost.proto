@@ -24,6 +24,11 @@ service Hiprost {
 
   // WatchObjects watches objects for updates.
   rpc WatchObjects(WatchObjectsRequest) returns (stream WatchObjectsResponse);
+
+  // Sync ensures the backend has stored all object states of requests finished
+  // so far to the storage medium. For purely in-memory backends, this call
+  // may succeed trivially.
+  rpc Sync(SyncRequest) returns (SyncResponse);
 }
 
 // PutObjectRequest is the PutObject RPC request message.
@@ -170,6 +175,17 @@ message WatchObjectsResponse {
 
   // created indicates the object at address has just been created.
   bool created = 4;
+}
+
+// SyncRequest is the Sync RPC request message.
+message SyncRequest {
+}
+
+// SyncResponse is the Sync RPC response message.
+message SyncResponse {
+  // error describes the error which occurred during the Sync RPC. Present if
+  // and only if an error occurred.
+  Error error = 1;
 }
 
 // Address describes an object address.

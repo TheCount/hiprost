@@ -73,4 +73,8 @@ type Interface interface {
 	// WatchObjects returns immediately, updates are served from a new goroutine.
 	WatchObjects(ctx context.Context, baseAddr Address, sendInitial bool,
 		updateCh chan<- Update) error
+
+	// Sync ensures all previously concluded calls to this backend are represented
+	// on the storage medium. For in-memory backends, this may well be a no-op.
+	Sync(ctx context.Context) error
 }

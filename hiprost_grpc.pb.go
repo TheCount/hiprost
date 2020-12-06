@@ -27,6 +27,10 @@ type HiprostClient interface {
 	ListObjects(ctx context.Context, in *ListObjectsRequest, opts ...grpc.CallOption) (*ListObjectsResponse, error)
 	// WatchObjects watches objects for updates.
 	WatchObjects(ctx context.Context, in *WatchObjectsRequest, opts ...grpc.CallOption) (Hiprost_WatchObjectsClient, error)
+	// Sync ensures the backend has stored all object states of requests finished
+	// so far to the storage medium. For purely in-memory backends, this call
+	// may succeed trivially.
+	Sync(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (*SyncResponse, error)
 }
 
 type hiprostClient struct {
@@ -105,6 +109,15 @@ func (x *hiprostWatchObjectsClient) Recv() (*WatchObjectsResponse, error) {
 	return m, nil
 }
 
+func (c *hiprostClient) Sync(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (*SyncResponse, error) {
+	out := new(SyncResponse)
+	err := c.cc.Invoke(ctx, "/com.github.thecount.hiprost.Hiprost/Sync", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // HiprostServer is the server API for Hiprost service.
 // All implementations must embed UnimplementedHiprostServer
 // for forward compatibility
@@ -119,6 +132,10 @@ type HiprostServer interface {
 	ListObjects(context.Context, *ListObjectsRequest) (*ListObjectsResponse, error)
 	// WatchObjects watches objects for updates.
 	WatchObjects(*WatchObjectsRequest, Hiprost_WatchObjectsServer) error
+	// Sync ensures the backend has stored all object states of requests finished
+	// so far to the storage medium. For purely in-memory backends, this call
+	// may succeed trivially.
+	Sync(context.Context, *SyncRequest) (*SyncResponse, error)
 	mustEmbedUnimplementedHiprostServer()
 }
 
@@ -140,6 +157,9 @@ func (UnimplementedHiprostServer) ListObjects(context.Context, *ListObjectsReque
 }
 func (UnimplementedHiprostServer) WatchObjects(*WatchObjectsRequest, Hiprost_WatchObjectsServer) error {
 	return status.Errorf(codes.Unimplemented, "method WatchObjects not implemented")
+}
+func (UnimplementedHiprostServer) Sync(context.Context, *SyncRequest) (*SyncResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Sync not implemented")
 }
 func (UnimplementedHiprostServer) mustEmbedUnimplementedHiprostServer() {}
 
@@ -247,6 +267,24 @@ func (x *hiprostWatchObjectsServer) Send(m *WatchObjectsResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _Hiprost_Sync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SyncRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HiprostServer).Sync(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.github.thecount.hiprost.Hiprost/Sync",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HiprostServer).Sync(ctx, req.(*SyncRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Hiprost_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "com.github.thecount.hiprost.Hiprost",
 	HandlerType: (*HiprostServer)(nil),
@@ -266,6 +304,10 @@ var _Hiprost_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListObjects",
 			Handler:    _Hiprost_ListObjects_Handler,
+		},
+		{
+			MethodName: "Sync",
+			Handler:    _Hiprost_Sync_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

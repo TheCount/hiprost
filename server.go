@@ -296,6 +296,17 @@ func (s *server) WatchObjects(
 	}
 }
 
+// Sync implements HiprostServer.Sync.
+func (s *server) Sync(
+	ctx context.Context, _ *SyncRequest,
+) (*SyncResponse, error) {
+	result := &SyncResponse{}
+	if err := s.backend.Sync(ctx); err != nil {
+		result.Error = backendError(err)
+	}
+	return result, nil
+}
+
 // NewHiprostServer creates a new GRPC Hiprost server with the specified
 // storage backend.
 func NewHiprostServer(backend common.Interface) (HiprostServer, error) {
