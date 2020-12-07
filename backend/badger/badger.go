@@ -249,6 +249,9 @@ func (t *T) LoadObject(
 	if err == badger.ErrKeyNotFound {
 		return result, nil
 	}
+	if err != nil {
+		return result, err
+	}
 	if err = item.Value(func(val []byte) error {
 		return result.Decode(val)
 	}); err != nil {
